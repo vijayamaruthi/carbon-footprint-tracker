@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Track daily greenhouse gas emissions in kg CO2e." />
+    <title>Carbon Footprint Awareness Platform</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell" aria-labelledby="page-title">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Carbon Footprint Awareness Platform</p>
+          <h1 id="page-title">Daily greenhouse gas tracker</h1>
+        </div>
+        <label class="language-picker" for="language">
+          <span>Language</span>
+          <select id="language">
+            <option value="en">English</option>
+            <option value="hi">Hindi</option>
+            <option value="ta">Tamil</option>
+            <option value="te">Telugu</option>
+            <option value="kn">Kannada</option>
+          </select>
+        </label>
+      </header>
+
+      <section class="workspace" aria-label="Carbon tracking workspace">
+        <div class="left-rail">
+          <section class="panel" aria-labelledby="auth-title">
+            <h2 id="auth-title">Authentication</h2>
+            <form id="auth-form" class="stack">
+              <label for="alias">User alias</label>
+              <input id="alias" placeholder="e.g. home team" autocomplete="off" />
+              <p id="auth-status" class="muted" aria-live="polite">Session is kept in memory and obfuscated session storage.</p>
+              <button type="submit">Verify session</button>
+            </form>
+          </section>
+
+          <section class="panel" aria-labelledby="voice-title">
+            <h2 id="voice-title">Voice logging</h2>
+            <form id="voice-form" class="stack">
+              <label for="voice-text">Carbon activity transcript</label>
+              <textarea id="voice-text" rows="4" placeholder="I drove 15 kilometers in a petrol car"></textarea>
+              <p id="voice-preview" class="hint" aria-live="polite">Try transport, energy, diet, paper, or plastic entries.</p>
+              <button type="submit">Log voice entry</button>
+            </form>
+          </section>
+
+          <section class="panel" aria-labelledby="receipt-title">
+            <h2 id="receipt-title">Receipt and invoice scanning</h2>
+            <form id="receipt-form" class="stack">
+              <label for="receipt-text">Receipt text</label>
+              <textarea id="receipt-text" rows="5" placeholder="Electricity 4 units, paper 0.5 kg, plastic 0.2 kg"></textarea>
+              <button type="submit">Map eco impact</button>
+            </form>
+          </section>
+        </div>
+
+        <section class="dashboard" aria-labelledby="dashboard-title">
+          <div class="dashboard-header">
+            <div>
+              <p class="eyebrow">Summary dashboard</p>
+              <h2 id="dashboard-title">Carbon totals</h2>
+            </div>
+            <p id="log-count" class="muted">0 logged activities</p>
+          </div>
+
+          <div class="metric-grid" aria-label="Carbon emission totals">
+            <article><span>Today</span><strong id="daily-total">0.00 kg CO2e</strong></article>
+            <article><span>7 days</span><strong id="weekly-total">0.00 kg CO2e</strong></article>
+            <article><span>30 days</span><strong id="monthly-total">0.00 kg CO2e</strong></article>
+          </div>
+
+          <div id="chart" class="chart" role="img" aria-label="Emission breakdown by category"></div>
+          <div id="logs"></div>
+        </section>
+      </section>
+
+      <aside id="toasts" class="toast-region" aria-live="polite" aria-label="Notifications"></aside>
+    </main>
+    <script type="module" src="./demoApp.mjs"></script>
+  </body>
+</html>
