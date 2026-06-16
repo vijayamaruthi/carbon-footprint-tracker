@@ -3,6 +3,7 @@ import {
   calculateDashboardStats,
   decode,
   encode,
+  normalizeEmissionData,
   parseReceiptEmission,
   parseVoiceEmission,
   validateIngestionText
@@ -45,5 +46,28 @@ assert.equal(stats.categoryTotals.diet, 5.4);
 const encoded = encode("session-token");
 assert.notEqual(encoded, "session-token");
 assert.equal(decode(encoded), "session-token");
+assert.equal(decode("not-valid-base64"), "");
+
+const normalized = normalizeEmissionData({
+  preferredLanguage: "xx",
+  logs: [
+    {
+      id: "safe",
+      createdAt: "2026-06-09T09:00:00.000Z",
+      category: "transport",
+      source: "voice",
+      description: "<img src=x onerror=alert(1)>",
+      quantity: 1,
+      unit: "km",
+      kgCO2e: 0.192,
+      confidence: 2
+    },
+    { createdAt: "2026-06-09T09:00:00.000Z", category: "unknown", kgCO2e: 10 }
+  ]
+});
+assert.equal(normalized.preferredLanguage, "en");
+assert.equal(normalized.logs.length, 1);
+assert.equal(normalized.logs[0].description.includes("<"), false);
+assert.equal(normalized.logs[0].confidence, 1);
 
 console.log("carbon.test.mjs: all tests passed");

@@ -1,4 +1,5 @@
 import type { DashboardStats, EmissionCategory, EmissionLog } from "../types";
+import { isSupportedCategory } from "./validation";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const categories: EmissionCategory[] = ["transport", "energy", "diet", "consumption"];
@@ -12,7 +13,7 @@ export function calculateDashboardStats(logs: EmissionLog[], now = new Date()): 
   return logs.reduce<DashboardStats>(
     (stats, log) => {
       const createdAt = Date.parse(log.createdAt);
-      if (!Number.isFinite(createdAt)) return stats;
+      if (!Number.isFinite(createdAt) || !isSupportedCategory(log.category)) return stats;
 
       stats.categoryTotals[log.category] += log.kgCO2e;
       if (createdAt >= startOfToday) stats.dailyKgCO2e += log.kgCO2e;

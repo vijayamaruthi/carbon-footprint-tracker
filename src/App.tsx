@@ -39,7 +39,7 @@ export default function App(): React.ReactElement {
   );
 
   const handleLanguageChange = React.useCallback((preferredLanguage: EmissionData["preferredLanguage"]) => {
-    setData(saveLanguage(preferredLanguage));
+    setData((current) => ({ ...saveLanguage(preferredLanguage), session: current.session }));
   }, []);
 
   const handleSessionChange = React.useCallback(() => {

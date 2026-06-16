@@ -19,7 +19,8 @@ export const CATEGORY_LABELS = {
 
 const SAFE_TEXT = /^[\p{L}\p{N}\s.,:/()'-]+$/u;
 const NUMBER_PATTERN = /(\d+(?:\.\d+)?)/;
-const categories = ["transport", "energy", "diet", "consumption"];
+export const CATEGORIES = ["transport", "energy", "diet", "consumption"];
+const MAX_LOGS = 250;
 
 export function sanitizeInput(value) {
   return String(value ?? "").replace(/[<>`{}[\]\\]/g, " ").replace(/\s+/g, " ").trim();
@@ -36,6 +37,38 @@ export function validateIngestionText(value) {
 export function roundKg(value) {
   if (!Number.isFinite(value) || value <= 0) return 0;
   return Math.round(value * 100) / 100;
+}
+
+function isSupportedCategory(category) {
+  return CATEGORIES.includes(category);
+}
+
+function normalizeLog(log) {
+  if (!log || typeof log !== "object" || !isSupportedCategory(log.category)) return undefined;
+
+  const createdAt = Date.parse(log.createdAt);
+  const kgCO2e = roundKg(Number(log.kgCO2e));
+  if (!Number.isFinite(createdAt) || kgCO2e <= 0) return undefined;
+
+  return {
+    id: sanitizeInput(log.id || globalThis.crypto?.randomUUID?.() || `${createdAt}`),
+    createdAt: new Date(createdAt).toISOString(),
+    category: log.category,
+    source: ["voice", "receipt", "manual"].includes(log.source) ? log.source : "manual",
+    description: sanitizeInput(log.description).slice(0, 160) || "Carbon activity",
+    quantity: Math.max(0, Number(log.quantity) || 0),
+    unit: sanitizeInput(log.unit).slice(0, 16) || "unit",
+    kgCO2e,
+    confidence: Math.min(1, Math.max(0, Number(log.confidence) || 0))
+  };
+}
+
+export function normalizeEmissionData(value) {
+  const logs = Array.isArray(value?.logs) ? value.logs.map(normalizeLog).filter(Boolean).slice(0, MAX_LOGS) : [];
+  const preferredLanguage = ["en", "hi", "ta", "te", "kn"].includes(value?.preferredLanguage)
+    ? value.preferredLanguage
+    : "en";
+  return { logs, preferredLanguage };
 }
 
 export function parseVoiceEmission(rawText) {
@@ -101,7 +134,7 @@ export function createLog(input, source) {
 }
 
 export function calculateDashboardStats(logs, now = new Date()) {
-  const totals = Object.fromEntries(categories.map((category) => [category, 0]));
+  const totals = Object.fromEntries(CATEGORIES.map((category) => [category, 0]));
   const dayMs = 24 * 60 * 60 * 1000;
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const week = now.getTime() - 7 * dayMs;
@@ -110,7 +143,7 @@ export function calculateDashboardStats(logs, now = new Date()) {
   return logs.reduce(
     (stats, log) => {
       const createdAt = Date.parse(log.createdAt);
-      if (!Number.isFinite(createdAt)) return stats;
+      if (!Number.isFinite(createdAt) || !isSupportedCategory(log.category)) return stats;
       stats.categoryTotals[log.category] += log.kgCO2e;
       if (createdAt >= today) stats.dailyKgCO2e += log.kgCO2e;
       if (createdAt >= week) stats.weeklyKgCO2e += log.kgCO2e;
@@ -129,10 +162,15 @@ export function encode(value) {
 }
 
 export function decode(value) {
-  const [keyRaw, payloadRaw] = String(value ?? "").split(".");
-  if (!keyRaw || !payloadRaw) return "";
-  const key = Uint8Array.from(atob(keyRaw), (char) => char.charCodeAt(0));
-  const payload = Uint8Array.from(atob(payloadRaw), (char) => char.charCodeAt(0));
-  const unmasked = payload.map((byte, index) => byte ^ key[index % key.length]);
-  return new TextDecoder().decode(unmasked);
+  try {
+    const [keyRaw, payloadRaw] = String(value ?? "").split(".");
+    if (!keyRaw || !payloadRaw) return "";
+    const key = Uint8Array.from(atob(keyRaw), (char) => char.charCodeAt(0));
+    const payload = Uint8Array.from(atob(payloadRaw), (char) => char.charCodeAt(0));
+    if (key.length === 0 || payload.length === 0) return "";
+    const unmasked = payload.map((byte, index) => byte ^ key[index % key.length]);
+    return new TextDecoder().decode(unmasked);
+  } catch {
+    return "";
+  }
 }

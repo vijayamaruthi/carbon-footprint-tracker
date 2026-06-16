@@ -1,4 +1,5 @@
 import type { EmissionData, EmissionLog, LanguageCode, SessionState } from "../types";
+import { normalizeLanguage, normalizeStoredLogs } from "./validation";
 
 const STORAGE_KEY = "carbon-platform-data-v1";
 const SESSION_KEY = "carbon-platform-session-v1";
@@ -16,12 +17,17 @@ function encode(value: string): string {
 }
 
 function decode(value: string): string {
-  const [keyRaw, payloadRaw] = value.split(".");
-  if (!keyRaw || !payloadRaw) return "";
-  const key = Uint8Array.from(atob(keyRaw), (char) => char.charCodeAt(0));
-  const payload = Uint8Array.from(atob(payloadRaw), (char) => char.charCodeAt(0));
-  const unmasked = payload.map((byte, index) => byte ^ key[index % key.length]);
-  return new TextDecoder().decode(unmasked);
+  try {
+    const [keyRaw, payloadRaw] = value.split(".");
+    if (!keyRaw || !payloadRaw) return "";
+    const key = Uint8Array.from(atob(keyRaw), (char) => char.charCodeAt(0));
+    const payload = Uint8Array.from(atob(payloadRaw), (char) => char.charCodeAt(0));
+    if (key.length === 0 || payload.length === 0) return "";
+    const unmasked = payload.map((byte, index) => byte ^ key[index % key.length]);
+    return new TextDecoder().decode(unmasked);
+  } catch {
+    return "";
+  }
 }
 
 export function loadEmissionData(): EmissionData {
@@ -30,8 +36,8 @@ export function loadEmissionData(): EmissionData {
     if (!stored) return initialData;
     const parsed = JSON.parse(decode(stored)) as EmissionData;
     return {
-      logs: Array.isArray(parsed.logs) ? parsed.logs : [],
-      preferredLanguage: parsed.preferredLanguage ?? "en"
+      logs: normalizeStoredLogs(parsed.logs),
+      preferredLanguage: normalizeLanguage(parsed.preferredLanguage)
     };
   } catch {
     return initialData;
@@ -39,7 +45,10 @@ export function loadEmissionData(): EmissionData {
 }
 
 export function saveEmissionData(data: EmissionData): void {
-  localStorage.setItem(STORAGE_KEY, encode(JSON.stringify(data)));
+  localStorage.setItem(
+    STORAGE_KEY,
+    encode(JSON.stringify({ logs: normalizeStoredLogs(data.logs), preferredLanguage: normalizeLanguage(data.preferredLanguage) }))
+  );
 }
 
 export function addEmissionLogs(logs: EmissionLog[]): EmissionData {
